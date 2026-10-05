@@ -1,4 +1,4 @@
-import { SAMPLE_RATE, makeFrame, frameTransitions, FlashTracker } from './analyzer.js';
+import { SAMPLE_RATE, makeFrame, IrisFlashDetector } from './analyzer.js';
 
 const $ = id => document.getElementById(id);
 const fileInput = $('file-input');
@@ -95,8 +95,8 @@ function showResults(duration, tracker) {
   const banner = $('result-banner');
   banner.classList.toggle('flagged', intervals.length > 0);
   banner.textContent = intervals.length
-    ? `${intervals.length} section${intervals.length === 1 ? '' : 's'} flagged for possible rapid flashes. Review the times below before playback.`
-    : 'No rapid flash sections were flagged in sampled frames. Other triggers may still be present.';
+    ? `${intervals.length} section${intervals.length === 1 ? '' : 's'} flagged for possible flashing. Review the times below before playback.`
+    : 'No flash sections were flagged in sampled frames. Other triggers may still be present.';
   const timeline = $('timeline');
   timeline.replaceChildren();
   timeline.classList.toggle('hidden', intervals.length === 0);
@@ -111,7 +111,7 @@ function showResults(duration, tracker) {
     const time = document.createElement('span');
     time.className = 'time-chip';
     time.textContent = `${formatTime(interval.start)}–${formatTime(interval.end)}`;
-    item.append(time, document.createTextNode(interval.kinds.join(' + ') + ' flashes'));
+    item.append(time, document.createTextNode(`${interval.kinds.join(' + ')} · ${interval.levels.join(', ')}`));
     findings.append(item);
   }
   player.src = fileURL;
@@ -135,16 +135,18 @@ async function scan() {
     if (scanner.readyState < 1) await waitFor(scanner, 'loadedmetadata', signal);
     const duration = scanner.duration;
     if (!Number.isFinite(duration) || duration <= 0) throw new Error('This video has no readable duration.');
+    const aspect = scanner.videoWidth / scanner.videoHeight;
+    if (!Number.isFinite(aspect) || aspect <= 0) throw new Error('This video has no readable dimensions.');
+    canvas.width = Math.max(1, Math.round(480 * Math.min(1, aspect)));
+    canvas.height = Math.max(1, Math.round(480 / Math.max(1, aspect)));
     const count = Math.ceil(duration * SAMPLE_RATE);
-    const tracker = new FlashTracker();
-    let previous = null;
+    const tracker = new IrisFlashDetector();
     for (let i = 0; i <= count; i++) {
       const time = Math.min(i / SAMPLE_RATE, Math.max(0, duration - 0.001));
       await seekTo(time, signal);
       context.drawImage(scanner, 0, 0, canvas.width, canvas.height);
       const frame = makeFrame(context.getImageData(0, 0, canvas.width, canvas.height).data);
-      if (previous) tracker.add(time, frameTransitions(previous, frame));
-      previous = frame;
+      tracker.addFrame(time, frame);
       if (i % 10 === 0 || i === count) {
         const percent = Math.round(100 * i / count);
         $('progress-bar').style.width = `${percent}%`;

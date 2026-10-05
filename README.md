@@ -12,11 +12,28 @@ Open `http://localhost:8000`, choose a video, and click **Scan video**. The page
 
 Run the analyzer tests with `npm test`.
 
-## What the scanner checks
+## Flashing test fixture
 
-The scanner seeks through the browser-decoded video at up to 30 samples per second and analyzes downscaled 160 × 90 frames. It looks for changes in relative luminance over at least 20% of sampled pixels, or saturated-red pixels appearing and disappearing over that area. Four opposing transition pairs within a rolling second flag an interval. This is a screening heuristic informed by [WCAG 2.2's flash definitions](https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold) and [EA IRIS](https://github.com/electronicarts/IRIS); it is **not** an IRIS port or a WCAG compliance test.
+`fixtures/POTENTIAL_SEIZURE_TRIGGER_DO_NOT_PLAY.webm` is a **potentially hazardous** four-second fixture: one second of static gray, two seconds of full-frame black/white flashing at five cycles per second, then one second of static gray. Do not preview or play it directly. Select it in Frameguard and scan it before considering playback.
 
-A clear scan does **not** mean a video is safe. Sampling can miss brief or high-frequency flashes, small regions, moving patterns, and spatial patterns. The red check uses a simplified RGB screen rather than WCAG's CIE chromaticity calculation. A browser's decoder, seeking precision, and supported formats also affect results. The scan can be slow for long videos because it decodes each sample before playback.
+With FFmpeg installed, `npm run verify-fixture` decodes the video without displaying it and asserts that the analyzer reports a rapid brightness alert. This verifies the analysis path on decoded frames, not the browser's seeking or playback guard. No video can be guaranteed to cause a seizure in a particular person.
+
+## IRIS port status
+
+`analyzer.js` ports the flash mechanics from [EA IRIS](https://github.com/electronicarts/IRIS):
+
+- sRGB to linear RGB lookup and relative luminance;
+- saturated-red coefficient `max(0, (R − G − B) × 320)` when `R / (R + G + B) ≥ 0.8`;
+- a 25% changing-area gate and accumulated frame-average changes;
+- warning at four transitions per second, rapid-flash alert above six transitions per second, and an extended alert when four to six transitions persist for four seconds of a five-second window.
+
+IRIS's spatial-pattern detection is **not ported yet**. Its pattern implementation uses OpenCV Fourier transforms and contour analysis; it needs a separate browser implementation and test fixtures. See [IRIS attribution and license](THIRD_PARTY_LICENSES.md).
+
+## Accuracy limits
+
+This uses the browser's decoder and seeks through the file at up to 60 samples per second, analyzing frames scaled to at most 480 pixels on the longest side. IRIS normally analyzes decoded frames through OpenCV/FFmpeg, so browser seeking may skip source frames or sample the same frame twice. A clear scan does **not** mean the video is safe: fast or brief flashes, spatial patterns, HDR content, and decoder or scaling differences may affect results. This prototype has not been validated against IRIS's output or tested for WCAG conformance. IRIS itself does not guarantee or certify safety.
+
+The scan can be slow for long videos because it decodes each sample before playback.
 
 ## Browser scope
 
