@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Frameguard — check a video before watching</title>
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <main class="shell">
+    <header class="topbar">
+      <div class="brand"><span class="brand-mark" aria-hidden="true">▦</span> FRAMEGUARD <span class="brand-tag">LOCAL VIDEO CHECK</span></div>
+      <span class="privacy"><span class="privacy-dot"></span> Stays on your device</span>
+    </header>
+
+    <section class="hero" aria-labelledby="page-title">
+      <div class="eyebrow">A quieter way to press play <span class="line"></span> 01 / 03</div>
+      <h1 id="page-title">Know before<br><em>you watch.</em></h1>
+      <p class="intro">Check a video for rapid brightness and saturated red flashes before it appears on screen. Review flagged moments, then choose what to watch.</p>
+      <div class="hero-note"><span class="asterisk">✳</span><span>This is a screening tool. A clear scan cannot guarantee a video is free of seizure triggers.</span></div>
+    </section>
+
+    <section class="workspace" aria-label="Video scanner">
+      <div class="step-header"><span class="step-number">01</span><div><h2>Choose a video</h2><p>Pick a file from your device. It is processed in this browser and is never uploaded.</p></div></div>
+      <label id="dropzone" class="dropzone" for="file-input">
+        <span class="upload-icon" aria-hidden="true">↑</span>
+        <strong>Drop a video here or browse files</strong>
+        <span>MP4, WebM, and other formats your browser can play</span>
+        <input id="file-input" type="file" accept="video/*">
+      </label>
+      <div id="file-details" class="file-details hidden"><span id="file-name"></span><span id="file-size"></span></div>
+
+      <div id="scan-section" class="scan-section hidden">
+        <div class="step-header"><span class="step-number">02</span><div><h2>Scan before playback</h2><p>The video stays hidden while frames are checked. Longer videos take more time.</p></div></div>
+        <div class="scan-controls">
+          <button id="scan-button" class="button primary">Scan video <span aria-hidden="true">↗</span></button>
+          <button id="cancel-button" class="button subtle hidden">Cancel scan</button>
+          <span id="scan-status" class="scan-status" role="status" aria-live="polite">Ready to scan</span>
+        </div>
+        <div id="progress-wrap" class="progress-wrap hidden"><div id="progress-bar" class="progress-bar"></div></div>
+      </div>
+
+      <div id="results-section" class="results-section hidden">
+        <div class="step-header"><span class="step-number">03</span><div><h2>Review &amp; watch</h2><p>Playback pauses before a flagged section. You can skip it or continue.</p></div></div>
+        <div id="result-banner" class="result-banner" role="status"></div>
+        <div id="player-wrap" class="player-wrap">
+          <video id="player" controls playsinline preload="metadata"></video>
+          <div id="warning" class="warning hidden" role="dialog" aria-modal="true" aria-labelledby="warning-title">
+            <div class="warning-inner">
+              <span class="warning-symbol" aria-hidden="true">!</span>
+              <span class="warning-kicker">FLAGGED SECTION AHEAD</span>
+              <h3 id="warning-title">Potential flash trigger</h3>
+              <p id="warning-description"></p>
+              <div class="warning-actions">
+                <button id="skip-button" class="button primary">Skip this section <span aria-hidden="true">→</span></button>
+                <button id="continue-button" class="button secondary">Continue anyway</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div id="timeline" class="timeline hidden" aria-label="Flagged times"></div>
+        <ol id="findings" class="findings"></ol>
+      </div>
+      <video id="scanner" class="scanner" muted playsinline preload="auto" aria-hidden="true"></video>
+      <canvas id="analysis-canvas" width="160" height="90" hidden></canvas>
+    </section>
+
+    <footer><p><strong>About this check</strong> &nbsp;It samples video at up to 30 frames per second and looks for repeated large-area brightness and saturated red changes. It may miss brief, high-frequency, or patterned triggers. It does not perform an IRIS or WCAG certification.</p><p>Informed by <a href="https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold" target="_blank" rel="noopener noreferrer">WCAG flash guidance</a> and <a href="https://github.com/electronicarts/IRIS" target="_blank" rel="noopener noreferrer">EA IRIS</a>.</p></footer>
+  </main>
+</body>
+</html>
