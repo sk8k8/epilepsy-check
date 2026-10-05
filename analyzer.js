@@ -3,6 +3,7 @@
  * https://github.com/electronicarts/IRIS (BSD-3-Clause; see THIRD_PARTY_LICENSES.md).
  * Browser frame acquisition differs from IRIS's FFmpeg/OpenCV decoder.
  */
+import { IrisPatternDetector } from './pattern.js';
 export const SAMPLE_RATE = 60;
 export const FLASH_AREA = 0.25;
 export const LUMINANCE_DELTA = 0.1;
@@ -136,19 +137,46 @@ export class IrisFlashDetector {
   }
 
   intervals(duration) {
-    const intervals = [];
-    for (const alert of this.alerts.sort((a, b) => a.time - b.time)) {
-      const start = Math.max(0, alert.time - (alert.level === 'extended' ? 5 : 1.25));
-      const end = Math.min(duration, alert.time + 0.5);
-      const last = intervals.at(-1);
-      if (last && start <= last.end + 0.5) {
-        last.end = Math.max(last.end, end);
-        if (!last.kinds.includes(alert.kind)) last.kinds.push(alert.kind);
-        if (!last.levels.includes(alert.level)) last.levels.push(alert.level);
-      } else {
-        intervals.push({ start, end, kinds: [alert.kind], levels: [alert.level] });
-      }
+    return buildIntervals(this.alerts, duration);
+  }
+}
+
+export function buildIntervals(alerts, duration) {
+  const intervals = [];
+  for (const alert of [...alerts].sort((a, b) => a.time - b.time)) {
+    const start = Math.max(0, alert.time - (alert.level === 'extended' ? 5 : 1.25));
+    const end = Math.min(duration, Math.max(alert.time + 0.5, alert.end ?? 0));
+    const last = intervals.at(-1);
+    if (last && start <= last.end + 0.5) {
+      last.end = Math.max(last.end, end);
+      if (!last.kinds.includes(alert.kind)) last.kinds.push(alert.kind);
+      if (!last.levels.includes(alert.level)) last.levels.push(alert.level);
+    } else {
+      intervals.push({ start, end, kinds: [alert.kind], levels: [alert.level] });
     }
-    return intervals;
+  }
+  return intervals;
+}
+
+export class IrisAnalyzer {
+  constructor(width, height) {
+    this.flash = new IrisFlashDetector();
+    this.pattern = new IrisPatternDetector(width, height);
+    this.patternSample = -1;
+  }
+
+  addFrame(time, frame) {
+    this.flash.addFrame(time, frame);
+    // Pattern persistence is measured over time; 15 analyzed frames per second
+    // avoid repeating the Fourier analysis at every flash-analysis sample.
+    const sample = Math.floor(time * 15 + 1e-6);
+    if (sample > this.patternSample) {
+      this.pattern.addFrame(time, frame);
+      this.patternSample = sample;
+    }
+  }
+
+  intervals(duration) {
+    return buildIntervals([...this.flash.alerts, ...this.pattern.alerts], duration);
   }
 }

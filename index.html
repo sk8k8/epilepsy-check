@@ -18,7 +18,7 @@
     <section class="hero" aria-labelledby="page-title">
       <div class="eyebrow">A quieter way to press play <span class="line"></span> 01 / 03</div>
       <h1 id="page-title">Know before<br><em>you watch.</em></h1>
-      <p class="intro">Check a video for brightness and saturated red flashes before it appears on screen. Review flagged moments, then choose what to watch.</p>
+      <p class="intro">Check a video for brightness flashes, saturated red flashes, and repeated spatial patterns before it appears on screen. Review flagged moments, then choose what to watch.</p>
       <div class="hero-note"><span class="asterisk">✳</span><span>This is a screening tool. A clear scan cannot guarantee a video is free of seizure triggers.</span></div>
     </section>
 
@@ -51,7 +51,7 @@
             <div class="warning-inner">
               <span class="warning-symbol" aria-hidden="true">!</span>
               <span class="warning-kicker">FLAGGED SECTION AHEAD</span>
-              <h3 id="warning-title">Potential flash trigger</h3>
+              <h3 id="warning-title">Potential visual trigger</h3>
               <p id="warning-description"></p>
               <div class="warning-actions">
                 <button id="skip-button" class="button primary">Skip this section <span aria-hidden="true">→</span></button>
@@ -67,7 +67,7 @@
       <canvas id="analysis-canvas" width="480" height="270" hidden></canvas>
     </section>
 
-    <footer><p><strong>About this check</strong> &nbsp;The flash analysis follows IRIS's luminance, saturated-red, and transition-window mechanics on browser-sampled frames. Pattern detection is not implemented yet. Sampling may miss brief or high-frequency flashes. This is not an IRIS or WCAG certification.</p><p>Based on <a href="https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold" target="_blank" rel="noopener noreferrer">WCAG flash guidance</a> and <a href="https://github.com/electronicarts/IRIS" target="_blank" rel="noopener noreferrer">EA IRIS</a>.</p></footer>
+    <footer><p><strong>About this check</strong> &nbsp;The analysis adapts IRIS's flash and spatial-pattern mechanics to browser-sampled frames. Sampling and downscaling may miss triggers. This is not an IRIS or WCAG certification.</p><p>Based on <a href="https://www.w3.org/WAI/WCAG22/Understanding/three-flashes-or-below-threshold" target="_blank" rel="noopener noreferrer">WCAG flash guidance</a> and <a href="https://github.com/electronicarts/IRIS" target="_blank" rel="noopener noreferrer">EA IRIS</a>.</p></footer>
   </main>
 </body>
 </html>

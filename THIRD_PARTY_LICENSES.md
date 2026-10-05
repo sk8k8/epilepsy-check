@@ -1,6 +1,6 @@
 # Electronic Arts IRIS
 
-The flash analysis in `analyzer.js` is a JavaScript port of mechanics from [Electronic Arts IRIS](https://github.com/electronicarts/IRIS). IRIS is licensed under the BSD 3-Clause License:
+The flash analysis in `analyzer.js` and pattern analysis in `pattern.js` adapt mechanics from [Electronic Arts IRIS](https://github.com/electronicarts/IRIS). IRIS is licensed under the BSD 3-Clause License:
 
 > Copyright (c) 2023 Electronic Arts Inc. All rights reserved.
 >

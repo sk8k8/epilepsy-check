@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "python3 -m http.server 8000",
-    "test": "node analyzer.test.js",
+    "test": "node analyzer.test.js && node pattern.test.js",
     "verify-fixture": "node scripts/verify-fixture.js"
   }
 }

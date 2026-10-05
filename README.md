@@ -1,6 +1,6 @@
 # Frameguard
 
-A browser-only prototype that scans a **local video file before playback** and warns before sections with repeated brightness or saturated red changes. Video frames stay on the device. No build step, server-side processing, or external library is needed.
+A browser-only prototype that scans a **local video file before playback** and warns before sections with rapid flashes or persistent spatial patterns. Video frames stay on the device. No build step, server-side processing, or external library is needed.
 
 ## Run
 
@@ -20,18 +20,18 @@ With FFmpeg installed, `npm run verify-fixture` decodes the video without displa
 
 ## IRIS port status
 
-`analyzer.js` ports the flash mechanics from [EA IRIS](https://github.com/electronicarts/IRIS):
+`analyzer.js` ports flash mechanics from [EA IRIS](https://github.com/electronicarts/IRIS):
 
 - sRGB to linear RGB lookup and relative luminance;
 - saturated-red coefficient `max(0, (R − G − B) × 320)` when `R / (R + G + B) ≥ 0.8`;
 - a 25% changing-area gate and accumulated frame-average changes;
 - warning at four transitions per second, rapid-flash alert above six transitions per second, and an extended alert when four to six transitions persist for four seconds of a five-second window.
 
-IRIS's spatial-pattern detection is **not ported yet**. Its pattern implementation uses OpenCV Fourier transforms and contour analysis; it needs a separate browser implementation and test fixtures. See [IRIS attribution and license](THIRD_PARTY_LICENSES.md).
+`pattern.js` adapts IRIS's spatial-pattern pipeline: frequency-domain filtering and inverse reconstruction, repeated-region grouping, a 25% area threshold, at least six stripe components, and half-second persistence. It processes sampled frames at 15 frames per second with a maximum 128-pixel transform dimension. OpenCV's exact contour and shape-matching behavior is approximated in JavaScript. Synthetic vertical, horizontal, and diagonal stripe cases are covered by `pattern.test.js`. See [IRIS attribution and license](THIRD_PARTY_LICENSES.md).
 
 ## Accuracy limits
 
-This uses the browser's decoder and seeks through the file at up to 60 samples per second, analyzing frames scaled to at most 480 pixels on the longest side. IRIS normally analyzes decoded frames through OpenCV/FFmpeg, so browser seeking may skip source frames or sample the same frame twice. A clear scan does **not** mean the video is safe: fast or brief flashes, spatial patterns, HDR content, and decoder or scaling differences may affect results. This prototype has not been validated against IRIS's output or tested for WCAG conformance. IRIS itself does not guarantee or certify safety.
+This uses the browser's decoder and seeks through the file at up to 60 samples per second, analyzing frames scaled to at most 480 pixels on the longest side. IRIS normally analyzes decoded frames through OpenCV/FFmpeg, so browser seeking may skip source frames or sample the same frame twice. A clear scan does **not** mean the video is safe: fast or brief flashes, fine or moving patterns, HDR content, and decoder or scaling differences may affect results. This prototype has not been validated against IRIS's output or tested for WCAG conformance. IRIS itself does not guarantee or certify safety.
 
 The scan can be slow for long videos because it decodes each sample before playback.
 

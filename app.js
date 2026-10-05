@@ -1,4 +1,4 @@
-import { SAMPLE_RATE, makeFrame, IrisFlashDetector } from './analyzer.js';
+import { SAMPLE_RATE, makeFrame, IrisAnalyzer } from './analyzer.js';
 
 const $ = id => document.getElementById(id);
 const fileInput = $('file-input');
@@ -95,8 +95,8 @@ function showResults(duration, tracker) {
   const banner = $('result-banner');
   banner.classList.toggle('flagged', intervals.length > 0);
   banner.textContent = intervals.length
-    ? `${intervals.length} section${intervals.length === 1 ? '' : 's'} flagged for possible flashing. Review the times below before playback.`
-    : 'No flash sections were flagged in sampled frames. Other triggers may still be present.';
+    ? `${intervals.length} section${intervals.length === 1 ? '' : 's'} flagged for possible flashes or spatial patterns. Review the times below before playback.`
+    : 'No flash or spatial-pattern sections were flagged in sampled frames. Other triggers may still be present.';
   const timeline = $('timeline');
   timeline.replaceChildren();
   timeline.classList.toggle('hidden', intervals.length === 0);
@@ -140,7 +140,7 @@ async function scan() {
     canvas.width = Math.max(1, Math.round(480 * Math.min(1, aspect)));
     canvas.height = Math.max(1, Math.round(480 / Math.max(1, aspect)));
     const count = Math.ceil(duration * SAMPLE_RATE);
-    const tracker = new IrisFlashDetector();
+    const tracker = new IrisAnalyzer(canvas.width, canvas.height);
     for (let i = 0; i <= count; i++) {
       const time = Math.min(i / SAMPLE_RATE, Math.max(0, duration - 0.001));
       await seekTo(time, signal);
@@ -176,7 +176,7 @@ function showWarning(interval) {
   if (activeWarning === interval) return;
   activeWarning = interval;
   player.pause();
-  $('warning-description').textContent = `${interval.kinds.join(' and ')} flashes were flagged around ${formatTime(interval.start)}–${formatTime(interval.end)}. Skip this section or choose to continue.`;
+  $('warning-description').textContent = `A possible visual trigger (${interval.kinds.join(', ')}) was flagged around ${formatTime(interval.start)}–${formatTime(interval.end)}. Skip this section or choose to continue.`;
   $('warning').classList.remove('hidden');
   $('skip-button').focus();
 }
