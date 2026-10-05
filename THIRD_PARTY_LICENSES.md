@@ -1,3 +1,7 @@
+# Bulma
+
+The interface loads [Bulma 1.0.4](https://github.com/jgthms/bulma) from jsDelivr. Bulma is licensed under the [MIT License](https://github.com/jgthms/bulma/blob/master/LICENSE).
+
 # Electronic Arts IRIS
 
 The flash analysis in `analyzer.js` and pattern analysis in `pattern.js` adapt mechanics from [Electronic Arts IRIS](https://github.com/electronicarts/IRIS). IRIS is licensed under the BSD 3-Clause License:

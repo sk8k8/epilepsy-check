@@ -1,4 +1,6 @@
-import { SAMPLE_RATE, makeFrame, IrisAnalyzer } from './analyzer.js';
+import { makeFrame, IrisAnalyzer } from './analyzer.js';
+import { scanVideoFrames } from './frame-stream.js';
+import { scanWebMFile } from './webcodecs-scan.js';
 
 const $ = id => document.getElementById(id);
 const fileInput = $('file-input');
@@ -39,15 +41,15 @@ function chooseFile(file) {
   bypassed = null;
   $('file-name').textContent = file.name;
   $('file-size').textContent = `${(file.size / 1048576).toFixed(1)} MB`;
-  $('file-details').classList.remove('hidden');
-  $('scan-section').classList.remove('hidden');
-  $('results-section').classList.add('hidden');
-  $('warning').classList.add('hidden');
+  $('file-details').classList.remove('is-hidden');
+  $('scan-section').classList.remove('is-hidden');
+  $('results-section').classList.add('is-hidden');
+  $('warning').classList.add('is-hidden');
   $('scan-button').disabled = false;
-  $('scan-button').classList.remove('hidden');
-  $('cancel-button').classList.add('hidden');
-  $('progress-wrap').classList.add('hidden');
-  $('progress-bar').style.width = '0%';
+  $('scan-button').classList.remove('is-hidden');
+  $('cancel-button').classList.add('is-hidden');
+  $('progress-bar').classList.add('is-hidden');
+  $('progress-bar').value = 0;
   setStatus('Ready to scan');
 }
 fileInput.addEventListener('change', event => chooseFile(event.target.files?.[0]));
@@ -78,28 +80,18 @@ function waitFor(video, successEvent, signal) {
     if (signal.aborted) cancelled();
   });
 }
-async function seekTo(time, signal) {
-  if (signal.aborted) throw new DOMException('Cancelled', 'AbortError');
-  if (time === 0 && scanner.readyState < 2) {
-    await waitFor(scanner, 'loadeddata', signal);
-    return;
-  }
-  if (Math.abs(scanner.currentTime - time) < 0.0005 && scanner.readyState >= 2) return;
-  const pending = waitFor(scanner, 'seeked', signal);
-  scanner.currentTime = time;
-  await pending;
-}
 function showResults(duration, tracker) {
   intervals = tracker.intervals(duration);
-  $('results-section').classList.remove('hidden');
+  $('results-section').classList.remove('is-hidden');
   const banner = $('result-banner');
-  banner.classList.toggle('flagged', intervals.length > 0);
+  banner.classList.toggle('is-warning', intervals.length > 0);
+  banner.classList.toggle('is-success', intervals.length === 0);
   banner.textContent = intervals.length
     ? `${intervals.length} section${intervals.length === 1 ? '' : 's'} flagged for possible flashes or spatial patterns. Review the times below before playback.`
     : 'No flash or spatial-pattern sections were flagged in sampled frames. Other triggers may still be present.';
   const timeline = $('timeline');
   timeline.replaceChildren();
-  timeline.classList.toggle('hidden', intervals.length === 0);
+  timeline.classList.toggle('is-hidden', intervals.length === 0);
   const findings = $('findings');
   findings.replaceChildren();
   for (const interval of intervals) {
@@ -109,7 +101,7 @@ function showResults(duration, tracker) {
     timeline.append(mark);
     const item = document.createElement('li');
     const time = document.createElement('span');
-    time.className = 'time-chip';
+    time.className = 'tag is-warning is-light time-chip';
     time.textContent = `${formatTime(interval.start)}–${formatTime(interval.end)}`;
     item.append(time, document.createTextNode(`${interval.kinds.join(' + ')} · ${interval.levels.join(', ')}`));
     findings.append(item);
@@ -124,10 +116,10 @@ async function scan() {
   const controller = new AbortController();
   scanController = controller;
   const { signal } = controller;
-  $('scan-button').classList.add('hidden');
-  $('cancel-button').classList.remove('hidden');
-  $('progress-wrap').classList.remove('hidden');
-  $('results-section').classList.add('hidden');
+  $('scan-button').classList.add('is-hidden');
+  $('cancel-button').classList.remove('is-hidden');
+  $('progress-bar').classList.remove('is-hidden');
+  $('results-section').classList.add('is-hidden');
   setStatus('Reading video…');
   try {
     scanner.src = fileURL;
@@ -137,26 +129,40 @@ async function scan() {
     if (!Number.isFinite(duration) || duration <= 0) throw new Error('This video has no readable duration.');
     const aspect = scanner.videoWidth / scanner.videoHeight;
     if (!Number.isFinite(aspect) || aspect <= 0) throw new Error('This video has no readable dimensions.');
-    canvas.width = Math.max(1, Math.round(480 * Math.min(1, aspect)));
-    canvas.height = Math.max(1, Math.round(480 / Math.max(1, aspect)));
-    const count = Math.ceil(duration * SAMPLE_RATE);
+    const scale = Math.min(1, 256 / Math.max(scanner.videoWidth, scanner.videoHeight));
+    canvas.width = Math.max(1, Math.round(scanner.videoWidth * scale));
+    canvas.height = Math.max(1, Math.round(scanner.videoHeight * scale));
     const tracker = new IrisAnalyzer(canvas.width, canvas.height);
-    for (let i = 0; i <= count; i++) {
-      const time = Math.min(i / SAMPLE_RATE, Math.max(0, duration - 0.001));
-      await seekTo(time, signal);
-      context.drawImage(scanner, 0, 0, canvas.width, canvas.height);
-      const frame = makeFrame(context.getImageData(0, 0, canvas.width, canvas.height).data);
-      tracker.addFrame(time, frame);
-      if (i % 10 === 0 || i === count) {
-        const percent = Math.round(100 * i / count);
-        $('progress-bar').style.width = `${percent}%`;
+    const direct = /\.webm$/i.test(selectedFile.name) || selectedFile.type === 'video/webm';
+    const coverage = await (direct ? scanWebMFile(selectedFile, {
+      signal,
+      onFrame: videoFrame => {
+        context.drawImage(videoFrame, 0, 0, canvas.width, canvas.height);
+        const frame = makeFrame(context.getImageData(0, 0, canvas.width, canvas.height).data);
+        tracker.addFrame(videoFrame.timestamp / 1e6, frame);
+      },
+      onProgress: time => {
+        const percent = Math.min(100, Math.round(100 * time / duration));
+        $('progress-bar').value = percent;
         setStatus(`Scanning ${formatTime(time)} / ${formatTime(duration)} · ${percent}%`);
-        // Let the UI update during fast decodes.
-        await new Promise(resolve => setTimeout(resolve, 0));
-      }
-    }
-    if (signal.aborted) throw new DOMException('Cancelled', 'AbortError');
-    setStatus('Scan complete');
+      },
+    }) : scanVideoFrames(scanner, {
+      signal,
+      onFrame: metadata => {
+        context.drawImage(scanner, 0, 0, canvas.width, canvas.height);
+        const frame = makeFrame(context.getImageData(0, 0, canvas.width, canvas.height).data);
+        tracker.addFrame(metadata.mediaTime, frame);
+      },
+      onProgress: time => {
+        const percent = Math.min(100, Math.round(100 * time / duration));
+        $('progress-bar').value = percent;
+        setStatus(`Scanning ${formatTime(time)} / ${formatTime(duration)} · ${percent}%`);
+      },
+    }));
+    const missed = Math.max(coverage.callbackGaps, coverage.droppedFrames);
+    if (missed) throw new Error(`Scan incomplete: the browser skipped at least ${missed} frames. Try a WebM VP8/VP9 file in a browser with WebCodecs support.`);
+    $('progress-bar').value = 100;
+    setStatus(`Scan complete · ${coverage.analyzedFrames} frames checked`);
     showResults(duration, tracker);
   } catch (error) {
     setStatus(error.name === 'AbortError' ? 'Scan cancelled' : error.message || 'The scan could not finish.');
@@ -165,8 +171,8 @@ async function scan() {
     scanner.removeAttribute('src');
     scanner.load();
     if (scanController === controller) scanController = null;
-    $('scan-button').classList.remove('hidden');
-    $('cancel-button').classList.add('hidden');
+    $('scan-button').classList.remove('is-hidden');
+    $('cancel-button').classList.add('is-hidden');
   }
 }
 $('scan-button').addEventListener('click', scan);
@@ -177,7 +183,7 @@ function showWarning(interval) {
   activeWarning = interval;
   player.pause();
   $('warning-description').textContent = `A possible visual trigger (${interval.kinds.join(', ')}) was flagged around ${formatTime(interval.start)}–${formatTime(interval.end)}. Skip this section or choose to continue.`;
-  $('warning').classList.remove('hidden');
+  $('warning').classList.remove('is-hidden');
   $('skip-button').focus();
 }
 function checkRisk() {
@@ -193,14 +199,14 @@ $('skip-button').addEventListener('click', () => {
   const end = activeWarning.end;
   bypassed = activeWarning;
   activeWarning = null;
-  $('warning').classList.add('hidden');
+  $('warning').classList.add('is-hidden');
   player.currentTime = Math.min(end + 0.1, player.duration || end + 0.1);
   player.play().catch(() => {});
 });
 $('continue-button').addEventListener('click', () => {
   bypassed = activeWarning;
   activeWarning = null;
-  $('warning').classList.add('hidden');
+  $('warning').classList.add('is-hidden');
   player.play().catch(() => {});
 });
 window.addEventListener('beforeunload', () => { if (fileURL) URL.revokeObjectURL(fileURL); });

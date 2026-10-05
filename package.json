@@ -5,7 +5,9 @@
   "type": "module",
   "scripts": {
     "start": "python3 -m http.server 8000",
-    "test": "node analyzer.test.js && node pattern.test.js",
-    "verify-fixture": "node scripts/verify-fixture.js"
+    "test": "node analyzer.test.js && node pattern.test.js && node frame-stream.test.js && node webm.test.js && node webcodecs-scan.test.js",
+    "verify-fixture": "node scripts/verify-fixture.js",
+    "generate-all-features-fixture": "python3 scripts/generate-all-features-fixture.py",
+    "verify-all-features-fixture": "node scripts/verify-all-features-fixture.js"
   }
 }

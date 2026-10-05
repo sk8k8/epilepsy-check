@@ -4,7 +4,6 @@
  * Browser frame acquisition differs from IRIS's FFmpeg/OpenCV decoder.
  */
 import { IrisPatternDetector } from './pattern.js';
-export const SAMPLE_RATE = 60;
 export const FLASH_AREA = 0.25;
 export const LUMINANCE_DELTA = 0.1;
 export const RED_DELTA = 20;
